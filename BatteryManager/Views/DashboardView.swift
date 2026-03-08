@@ -165,6 +165,13 @@ struct DashboardView: View {
                 value: batteryInfo.temperatureFormatted,
                 subtitle: nil
             )
+
+            BatteryCardComponent(
+                icon: "clock.arrow.circlepath",
+                title: "Last Charge",
+                value: viewModel.lastChargeTimeFormatted,
+                subtitle: nil
+            )
         }
     }
     
@@ -326,6 +333,7 @@ struct SettingsView: View {
     @ObservedObject var viewModel: BatteryViewModel
     @Environment(\.dismiss) var dismiss
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @AppStorage("themeMode") private var themeMode = AppThemeMode.light.rawValue
     
     var body: some View {
         ZStack {
@@ -355,6 +363,9 @@ struct SettingsView: View {
                         if notificationStatus != .authorized {
                             notificationStatusBanner
                         }
+
+                        // Appearance
+                        appearanceSettings
                         
                         // Alert Settings
                         alertSettings
@@ -405,6 +416,29 @@ struct SettingsView: View {
             DispatchQueue.main.async {
                 self.notificationStatus = settings.authorizationStatus
             }
+        }
+    }
+
+    private var appearanceSettings: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("Appearance")
+                .font(Theme.Typography.title2)
+                .foregroundColor(Theme.Colors.primary)
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Picker("Theme", selection: $themeMode) {
+                    ForEach(AppThemeMode.allCases) { mode in
+                        Text(mode.title).tag(mode.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text("Default is Light mode. You can switch to Dark anytime.")
+                    .font(Theme.Typography.caption2)
+                    .foregroundColor(Theme.Colors.tertiary)
+            }
+            .padding(Theme.Spacing.md)
+            .cardStyle()
         }
     }
     
@@ -562,23 +596,6 @@ struct SettingsView: View {
                     }
                 }
 
-                Divider()
-                    .background(Theme.Colors.border)
-
-                // Charge-limit note
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    HStack {
-                        Image(systemName: "lock.slash")
-                            .foregroundColor(Theme.Colors.warning)
-                        Text("Charge Limit Control")
-                            .foregroundColor(Theme.Colors.primary)
-                            .font(Theme.Typography.headline)
-                    }
-
-                    Text("Directly stopping charging at 80% is not available through public macOS app APIs. Use macOS Optimized Battery Charging or a driver-based utility for hard charge caps.")
-                        .font(Theme.Typography.caption2)
-                        .foregroundColor(Theme.Colors.tertiary)
-                }
             }
             .padding(Theme.Spacing.md)
             .cardStyle()

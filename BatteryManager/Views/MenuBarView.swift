@@ -27,6 +27,13 @@ struct MenuBarView: View {
                 Divider()
                     .background(Theme.Colors.border)
                     .padding(.vertical, Theme.Spacing.sm)
+
+                // Top power apps
+                topAppsSection
+                
+                Divider()
+                    .background(Theme.Colors.border)
+                    .padding(.vertical, Theme.Spacing.sm)
                 
                 // Actions
                 menuActions
@@ -35,7 +42,7 @@ struct MenuBarView: View {
             }
         }
         .padding(Theme.Spacing.md)
-        .frame(width: 280)
+        .frame(width: 320)
         .background(Theme.Colors.background)
     }
     
@@ -43,22 +50,15 @@ struct MenuBarView: View {
     
     private func menuHeader(batteryInfo: BatteryInfo) -> some View {
         HStack(spacing: Theme.Spacing.md) {
-            // Battery icon with percentage
-            ZStack {
-                Circle()
-                    .stroke(Theme.Colors.border, lineWidth: 3)
-                    .frame(width: 50, height: 50)
-                
-                Circle()
-                    .trim(from: 0, to: CGFloat(batteryInfo.percentage) / 100.0)
-                    .stroke(batteryColor(batteryInfo), lineWidth: 3)
-                    .frame(width: 50, height: 50)
-                    .rotationEffect(.degrees(-90))
-                
+            ZStack(alignment: .center) {
+                Image(systemName: batterySymbolName(for: batteryInfo))
+                    .font(.system(size: 34, weight: .medium))
+                    .foregroundColor(batteryColor(batteryInfo))
+
                 if batteryInfo.isCharging {
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(batteryColor(batteryInfo))
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.green)
                 }
             }
             
@@ -102,12 +102,67 @@ struct MenuBarView: View {
                 label: "Time",
                 value: batteryInfo.timeRemainingFormatted
             )
+
+            statRow(
+                icon: "powerplug.fill",
+                label: "Source",
+                value: batteryInfo.powerSource
+            )
+
+            statRow(
+                icon: "clock.arrow.circlepath",
+                label: "Last Charge",
+                value: viewModel.lastChargeTimeFormatted
+            )
             
             statRow(
                 icon: "thermometer",
                 label: "Temperature",
                 value: batteryInfo.temperatureFormatted
             )
+        }
+    }
+
+    private var topAppsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Image(systemName: "list.bullet.clipboard")
+                    .font(.system(size: 12))
+                    .foregroundColor(Theme.Colors.secondary)
+                Text("Top Battery Usage Apps")
+                    .font(Theme.Typography.caption.weight(.semibold))
+                    .foregroundColor(Theme.Colors.secondary)
+            }
+
+            if viewModel.topBatteryApps.isEmpty {
+                Text("Collecting app usage data...")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.tertiary)
+            } else {
+                ForEach(viewModel.topBatteryApps) { app in
+                    appUsageRow(app)
+                }
+            }
+        }
+    }
+
+    private func appUsageRow(_ app: AppBatteryUsage) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 10))
+                .foregroundColor(Theme.Colors.success)
+
+            Text(app.name)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.primary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Text(String(format: "%.0f%%", app.relativeBatteryPercent))
+                .font(Theme.Typography.caption.weight(.semibold))
+                .foregroundColor(Theme.Colors.primary)
+                .monospacedDigit()
         }
     }
     
@@ -133,6 +188,7 @@ struct MenuBarView: View {
                 .font(Theme.Typography.caption.weight(.semibold))
                 .foregroundColor(valueColor)
                 .monospacedDigit()
+                .lineLimit(1)
         }
     }
     
@@ -228,6 +284,18 @@ struct MenuBarView: View {
             return Theme.Colors.warning
         } else {
             return Theme.Colors.success
+        }
+    }
+
+    private func batterySymbolName(for info: BatteryInfo) -> String {
+        if info.percentage <= 20 {
+            return "battery.25"
+        } else if info.percentage <= 50 {
+            return "battery.50"
+        } else if info.percentage <= 75 {
+            return "battery.75"
+        } else {
+            return "battery.100"
         }
     }
     

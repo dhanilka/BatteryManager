@@ -5,21 +5,54 @@
 //  Created by Dhanilka Dasanayake on 3/8/26.
 //
 
+import AppKit
 import SwiftUI
+
+enum AppThemeMode: String, CaseIterable, Identifiable {
+    case light
+    case dark
+    case system
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .light: return "Light"
+        case .dark: return "Dark"
+        case .system: return "System"
+        }
+    }
+
+    var preferredColorScheme: ColorScheme? {
+        switch self {
+        case .light: return .light
+        case .dark: return .dark
+        case .system: return nil
+        }
+    }
+}
 
 struct Theme {
     // MARK: - Colors
     struct Colors {
-        static let background = Color.black
-        static let cardBackground = Color(white: 0.05)
-        static let primary = Color.white
-        static let secondary = Color(white: 0.6)
-        static let tertiary = Color(white: 0.4)
-        static let accent = Color.white
-        static let border = Color(white: 0.2)
+        static let background = adaptive(light: NSColor(red: 0.95, green: 0.96, blue: 0.98, alpha: 1.0), dark: .black)
+        static let cardBackground = adaptive(light: NSColor.white, dark: NSColor(white: 0.06, alpha: 1.0))
+        static let primary = adaptive(light: NSColor(red: 0.10, green: 0.12, blue: 0.15, alpha: 1.0), dark: .white)
+        static let secondary = adaptive(light: NSColor(red: 0.39, green: 0.43, blue: 0.49, alpha: 1.0), dark: NSColor(white: 0.65, alpha: 1.0))
+        static let tertiary = adaptive(light: NSColor(red: 0.55, green: 0.58, blue: 0.62, alpha: 1.0), dark: NSColor(white: 0.45, alpha: 1.0))
+        static let accent = adaptive(light: .systemBlue, dark: .white)
+        static let border = adaptive(light: NSColor(red: 0.84, green: 0.86, blue: 0.90, alpha: 1.0), dark: NSColor(white: 0.20, alpha: 1.0))
         static let success = Color.green
         static let warning = Color.orange
         static let danger = Color.red
+
+        private static func adaptive(light: NSColor, dark: NSColor) -> Color {
+            let dynamic = NSColor(name: nil) { appearance in
+                let match = appearance.bestMatch(from: [.aqua, .darkAqua])
+                return match == .darkAqua ? dark : light
+            }
+            return Color(nsColor: dynamic)
+        }
     }
     
     // MARK: - Typography

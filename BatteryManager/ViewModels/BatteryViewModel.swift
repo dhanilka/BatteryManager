@@ -18,6 +18,8 @@ class BatteryViewModel: ObservableObject {
     
     // History for graphing (last 60 data points = 3 minutes at 3-second intervals)
     @Published var batteryHistory: [BatteryHistoryPoint] = []
+    @Published var topBatteryApps: [AppBatteryUsage] = []
+    @Published var lastChargeTime: Date?
     
     // Alert Settings
     @Published var alertsEnabled: Bool = false
@@ -32,6 +34,7 @@ class BatteryViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private let batteryService = BatteryService.shared
+    private let appUsageService = AppUsageService.shared
     private var timer: Timer?
     private let updateInterval: TimeInterval = 3.0 // 3 seconds
     private let maxHistoryPoints = 60
@@ -41,6 +44,7 @@ class BatteryViewModel: ObservableObject {
     private var lastLowAlertTriggered = false
     private var lastCriticalAlertTriggered = false
     private var lastKnownPercentage: Int?
+    private var previousChargingState: Bool?
     
     // MARK: - Initialization
     init() {
@@ -84,6 +88,17 @@ class BatteryViewModel: ObservableObject {
         UserDefaults.standard.set(sanitizedCustomAlertLevelsString(), forKey: "customAlertLevelsInput")
         UserDefaults.standard.set(criticalBatteryAlertEnabled, forKey: "criticalBatteryAlertEnabled")
         UserDefaults.standard.set(criticalBatteryThreshold, forKey: "criticalBatteryThreshold")
+        UserDefaults.standard.set(lastChargeTime?.timeIntervalSince1970, forKey: "lastChargeTime")
+    }
+
+    var lastChargeTimeFormatted: String {
+        guard let lastChargeTime else {
+            return "N/A"
+        }
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: lastChargeTime, relativeTo: Date())
     }
     
     // MARK: - Private Methods
@@ -99,23 +114,32 @@ class BatteryViewModel: ObservableObject {
     
     private func updateBatteryInfo() {
         guard hasBattery else { return }
-        
-        if let info = batteryService.getBatteryInfo() {
+
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+
+            let info = self.batteryService.getBatteryInfo()
+            let topApps = self.appUsageService.topBatteryUsageApps(limit: 4)
+
             DispatchQueue.main.async {
-                self.batteryInfo = info
-                self.isLoading = false
-                self.errorMessage = nil
-                
-                // Add to history
-                self.addToHistory(info)
-                
-                // Check for alerts
-                self.checkAlerts(info)
-            }
-        } else {
-            DispatchQueue.main.async {
-                self.errorMessage = "Failed to retrieve battery information."
-                self.isLoading = false
+                self.topBatteryApps = topApps
+
+                if let info {
+                    self.batteryInfo = info
+                    self.isLoading = false
+                    self.errorMessage = nil
+
+                    self.updateLastChargeTime(using: info)
+
+                    // Add to history
+                    self.addToHistory(info)
+
+                    // Check for alerts
+                    self.checkAlerts(info)
+                } else {
+                    self.errorMessage = "Failed to retrieve battery information."
+                    self.isLoading = false
+                }
             }
         }
     }
@@ -146,6 +170,9 @@ class BatteryViewModel: ObservableObject {
         customAlertLevelsInput = UserDefaults.standard.string(forKey: "customAlertLevelsInput") ?? "15,30,50,80"
         criticalBatteryAlertEnabled = UserDefaults.standard.bool(forKey: "criticalBatteryAlertEnabled")
         criticalBatteryThreshold = UserDefaults.standard.object(forKey: "criticalBatteryThreshold") as? Int ?? 5
+        if let time = UserDefaults.standard.object(forKey: "lastChargeTime") as? Double {
+            lastChargeTime = Date(timeIntervalSince1970: time)
+        }
     }
     
     private func checkAlerts(_ info: BatteryInfo) {
@@ -236,6 +263,21 @@ class BatteryViewModel: ObservableObject {
         let normalized = levels.map(String.init).joined(separator: ",")
         customAlertLevelsInput = normalized.isEmpty ? "15,30,50,80" : normalized
         return customAlertLevelsInput
+    }
+
+    private func updateLastChargeTime(using info: BatteryInfo) {
+        if let previousChargingState {
+            if !previousChargingState && info.isCharging {
+                lastChargeTime = Date()
+                UserDefaults.standard.set(lastChargeTime?.timeIntervalSince1970, forKey: "lastChargeTime")
+            }
+        } else if info.isCharging && lastChargeTime == nil {
+            // First app run while already charging.
+            lastChargeTime = Date()
+            UserDefaults.standard.set(lastChargeTime?.timeIntervalSince1970, forKey: "lastChargeTime")
+        }
+
+        self.previousChargingState = info.isCharging
     }
 }
 

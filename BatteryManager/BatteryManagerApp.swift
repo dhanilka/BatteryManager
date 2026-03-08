@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct BatteryManagerApp: App {
     @StateObject private var viewModel = BatteryViewModel()
+    @AppStorage("themeMode") private var themeMode = AppThemeMode.light.rawValue
     
     init() {
         // Request notification permissions on launch (with improved error handling)
@@ -33,10 +34,12 @@ struct BatteryManagerApp: App {
         // Menu Bar Extra
         MenuBarExtra {
             MenuBarView(viewModel: viewModel)
+                .preferredColorScheme(selectedThemeMode.preferredColorScheme)
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: batteryIcon)
                     .foregroundColor(batteryColor)
+                    .symbolRenderingMode(.hierarchical)
                 Text("\(viewModel.batteryInfo?.percentage ?? 0)%")
                     .font(.system(size: 12, weight: .medium))
                     .monospacedDigit()
@@ -47,6 +50,7 @@ struct BatteryManagerApp: App {
         // Dashboard Window
         Window("Battery Dashboard", id: "dashboard") {
             DashboardView(viewModel: viewModel)
+                .preferredColorScheme(selectedThemeMode.preferredColorScheme)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
@@ -59,9 +63,7 @@ struct BatteryManagerApp: App {
             return "battery.0"
         }
         
-        if info.isCharging {
-            return "bolt.fill"
-        } else if info.percentage <= 20 {
+        if info.percentage <= 20 {
             return "battery.25"
         } else if info.percentage <= 50 {
             return "battery.50"
@@ -84,7 +86,11 @@ struct BatteryManagerApp: App {
         } else if info.percentage <= 50 {
             return .orange
         } else {
-            return .white
+            return .primary
         }
+    }
+
+    private var selectedThemeMode: AppThemeMode {
+        AppThemeMode(rawValue: themeMode) ?? .light
     }
 }
