@@ -95,11 +95,23 @@ class BatteryService {
         )
 
         // Time Remaining (in minutes)
-        let iopsTimeToEmpty = positiveIntValue(from: iops[kIOPSTimeToEmptyKey])
-        let iopsTimeToFull = positiveIntValue(from: iops[kIOPSTimeToFullChargeKey])
-        let smartTimeToEmpty = positiveIntValue(from: smartBattery["AvgTimeToEmpty"]) ??
-            positiveIntValue(from: smartBattery["TimeRemaining"])
-        let smartTimeToFull = positiveIntValue(from: smartBattery["AvgTimeToFull"])
+        let iopsTimeToEmpty = normalizedTimeRemaining(
+            minutes: intValue(from: iops[kIOPSTimeToEmptyKey]),
+            isChargingEstimate: false
+        )
+        let iopsTimeToFull = normalizedTimeRemaining(
+            minutes: intValue(from: iops[kIOPSTimeToFullChargeKey]),
+            isChargingEstimate: true
+        )
+        let smartTimeToEmpty = normalizedTimeRemaining(
+            minutes: positiveIntValue(from: smartBattery["AvgTimeToEmpty"]) ??
+                positiveIntValue(from: smartBattery["TimeRemaining"]),
+            isChargingEstimate: false
+        )
+        let smartTimeToFull = normalizedTimeRemaining(
+            minutes: positiveIntValue(from: smartBattery["AvgTimeToFull"]),
+            isChargingEstimate: true
+        )
 
         let timeRemaining: Int? = {
             if isCharging {
@@ -238,6 +250,26 @@ class BatteryService {
         }
 
         return 0
+    }
+
+    private func normalizedTimeRemaining(minutes: Int?, isChargingEstimate: Bool) -> Int? {
+        guard let minutes, minutes > 0 else {
+            return nil
+        }
+
+        // Common placeholders reported by power APIs while estimate is unknown.
+        let invalidSentinelValues: Set<Int> = [255, 511, 1023, 2047, 4095, 8191, 16383, 32767, 65535]
+        guard !invalidSentinelValues.contains(minutes) else {
+            return nil
+        }
+
+        // Avoid clearly unrealistic/stale estimates and prefer showing "Calculating...".
+        let maxReasonableMinutes = isChargingEstimate ? 10 * 60 : 24 * 60
+        guard minutes <= maxReasonableMinutes else {
+            return nil
+        }
+
+        return minutes
     }
 
     private func resolvePercentage(

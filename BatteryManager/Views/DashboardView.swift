@@ -426,68 +426,158 @@ struct SettingsView: View {
                 }
                 .toggleStyle(.switch)
                 
-                if viewModel.alertsEnabled {
-                    Divider()
-                        .background(Theme.Colors.border)
-                    
-                    // Low battery alert
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Toggle(isOn: $viewModel.lowBatteryAlertEnabled) {
-                            HStack {
-                                Image(systemName: "battery.25")
-                                    .foregroundColor(Theme.Colors.danger)
-                                Text("Low Battery Alert")
-                                    .foregroundColor(Theme.Colors.primary)
-                            }
-                        }
-                        .toggleStyle(.switch)
-                        
-                        if viewModel.lowBatteryAlertEnabled {
-                            HStack {
-                                Text("Threshold:")
-                                    .foregroundColor(Theme.Colors.secondary)
-                                Slider(value: Binding(
-                                    get: { Double(viewModel.lowBatteryThreshold) },
-                                    set: { viewModel.lowBatteryThreshold = Int($0) }
-                                ), in: 5...30, step: 5)
-                                Text("\(viewModel.lowBatteryThreshold)%")
-                                    .foregroundColor(Theme.Colors.primary)
-                                    .monospacedDigit()
-                                    .frame(width: 40, alignment: .trailing)
-                            }
+                if !viewModel.alertsEnabled {
+                    Text("Enable Alerts to activate notifications and custom functions below.")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.warning)
+                }
+
+                Divider()
+                    .background(Theme.Colors.border)
+                
+                // Low battery alert
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Toggle(isOn: $viewModel.lowBatteryAlertEnabled) {
+                        HStack {
+                            Image(systemName: "battery.25")
+                                .foregroundColor(Theme.Colors.danger)
+                            Text("Low Battery Alert")
+                                .foregroundColor(Theme.Colors.primary)
                         }
                     }
+                    .toggleStyle(.switch)
+                    .disabled(!viewModel.alertsEnabled)
                     
-                    Divider()
-                        .background(Theme.Colors.border)
-                    
-                    // High battery alert
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Toggle(isOn: $viewModel.highBatteryAlertEnabled) {
-                            HStack {
-                                Image(systemName: "battery.100")
-                                    .foregroundColor(Theme.Colors.success)
-                                Text("High Battery Alert")
-                                    .foregroundColor(Theme.Colors.primary)
-                            }
-                        }
-                        .toggleStyle(.switch)
-                        
-                        if viewModel.highBatteryAlertEnabled {
-                            HStack {
-                                Text("Threshold:")
-                                    .foregroundColor(Theme.Colors.secondary)
-                                Slider(value: Binding(
-                                    get: { Double(viewModel.highBatteryThreshold) },
-                                    set: { viewModel.highBatteryThreshold = Int($0) }
-                                ), in: 70...100, step: 5)
-                                Text("\(viewModel.highBatteryThreshold)%")
-                                    .foregroundColor(Theme.Colors.primary)
-                                    .monospacedDigit()
-                                    .frame(width: 40, alignment: .trailing)
-                            }
+                    if viewModel.lowBatteryAlertEnabled {
+                        HStack {
+                            Text("Threshold:")
+                                .foregroundColor(Theme.Colors.secondary)
+                            Slider(value: Binding(
+                                get: { Double(viewModel.lowBatteryThreshold) },
+                                set: { viewModel.lowBatteryThreshold = Int($0) }
+                            ), in: 5...30, step: 5)
+                            .disabled(!viewModel.alertsEnabled)
+                            Text("\(viewModel.lowBatteryThreshold)%")
+                                .foregroundColor(Theme.Colors.primary)
+                                .monospacedDigit()
+                                .frame(width: 40, alignment: .trailing)
                         }
                     }
+                }
+                
+                Divider()
+                    .background(Theme.Colors.border)
+                
+                // High battery alert
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Toggle(isOn: $viewModel.highBatteryAlertEnabled) {
+                        HStack {
+                            Image(systemName: "battery.100")
+                                .foregroundColor(Theme.Colors.success)
+                            Text("High Battery Alert")
+                                .foregroundColor(Theme.Colors.primary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .disabled(!viewModel.alertsEnabled)
+                    
+                    if viewModel.highBatteryAlertEnabled {
+                        HStack {
+                            Text("Threshold:")
+                                .foregroundColor(Theme.Colors.secondary)
+                            Slider(value: Binding(
+                                get: { Double(viewModel.highBatteryThreshold) },
+                                set: { viewModel.highBatteryThreshold = Int($0) }
+                            ), in: 70...100, step: 5)
+                            .disabled(!viewModel.alertsEnabled)
+                            Text("\(viewModel.highBatteryThreshold)%")
+                                .foregroundColor(Theme.Colors.primary)
+                                .monospacedDigit()
+                                .frame(width: 40, alignment: .trailing)
+                        }
+                    }
+                }
+
+                Divider()
+                    .background(Theme.Colors.border)
+
+                // Custom level alerts
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Toggle(isOn: $viewModel.customLevelAlertsEnabled) {
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                                .foregroundColor(Theme.Colors.secondary)
+                            Text("Custom Level Alerts")
+                                .foregroundColor(Theme.Colors.primary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .disabled(!viewModel.alertsEnabled)
+
+                    if viewModel.customLevelAlertsEnabled {
+                        TextField("Levels (comma-separated, e.g. 15,30,80)", text: $viewModel.customAlertLevelsInput)
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(!viewModel.alertsEnabled)
+
+                        Text("Triggers when the battery crosses these levels in either direction.")
+                            .font(Theme.Typography.caption2)
+                            .foregroundColor(Theme.Colors.tertiary)
+                    }
+                }
+
+                Divider()
+                    .background(Theme.Colors.border)
+
+                // Critical low-battery warning
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Toggle(isOn: $viewModel.criticalBatteryAlertEnabled) {
+                        HStack {
+                            Image(systemName: "exclamationmark.octagon.fill")
+                                .foregroundColor(Theme.Colors.danger)
+                            Text("Critical Battery Warning")
+                                .foregroundColor(Theme.Colors.primary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .disabled(!viewModel.alertsEnabled)
+
+                    if viewModel.criticalBatteryAlertEnabled {
+                        HStack {
+                            Text("Threshold:")
+                                .foregroundColor(Theme.Colors.secondary)
+                            Slider(value: Binding(
+                                get: { Double(viewModel.criticalBatteryThreshold) },
+                                set: { viewModel.criticalBatteryThreshold = Int($0) }
+                            ), in: 2...15, step: 1)
+                            .disabled(!viewModel.alertsEnabled)
+                            Text("\(viewModel.criticalBatteryThreshold)%")
+                                .foregroundColor(Theme.Colors.primary)
+                                .monospacedDigit()
+                                .frame(width: 40, alignment: .trailing)
+                        }
+
+                        Text("Warning-only mode: macOS does not allow normal apps to force shutdown safely without privileged helpers.")
+                            .font(Theme.Typography.caption2)
+                            .foregroundColor(Theme.Colors.tertiary)
+                    }
+                }
+
+                Divider()
+                    .background(Theme.Colors.border)
+
+                // Charge-limit note
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    HStack {
+                        Image(systemName: "lock.slash")
+                            .foregroundColor(Theme.Colors.warning)
+                        Text("Charge Limit Control")
+                            .foregroundColor(Theme.Colors.primary)
+                            .font(Theme.Typography.headline)
+                    }
+
+                    Text("Directly stopping charging at 80% is not available through public macOS app APIs. Use macOS Optimized Battery Charging or a driver-based utility for hard charge caps.")
+                        .font(Theme.Typography.caption2)
+                        .foregroundColor(Theme.Colors.tertiary)
                 }
             }
             .padding(Theme.Spacing.md)

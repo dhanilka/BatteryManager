@@ -36,6 +36,20 @@ class AlertManager: NSObject {
             name: .batteryLowAlert,
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleBatteryCustomLevelAlert(_:)),
+            name: .batteryCustomLevelAlert,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleBatteryCriticalAlert(_:)),
+            name: .batteryCriticalAlert,
+            object: nil
+        )
     }
     
     // MARK: - Permission
@@ -123,6 +137,38 @@ class AlertManager: NSObject {
             sound: .default
         )
     }
+
+    @objc private func handleBatteryCustomLevelAlert(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let percentage = userInfo["percentage"] as? Int,
+              let targetLevel = userInfo["targetLevel"] as? Int,
+              let direction = userInfo["direction"] as? String else {
+            return
+        }
+
+        let directionText = direction == "up" ? "rising" : "dropping"
+        sendNotification(
+            title: "Custom Battery Alert",
+            body: "Battery reached \(percentage)% (target \(targetLevel)%, \(directionText)).",
+            identifier: "battery.custom.\(targetLevel).\(direction)",
+            sound: .default
+        )
+    }
+
+    @objc private func handleBatteryCriticalAlert(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let percentage = userInfo["percentage"] as? Int,
+              let threshold = userInfo["threshold"] as? Int else {
+            return
+        }
+
+        sendNotification(
+            title: "Critical Battery",
+            body: "Battery is at \(percentage)% (critical threshold \(threshold)%). Save work and connect power now.",
+            identifier: "battery.critical",
+            sound: .defaultCritical
+        )
+    }
     
     // MARK: - Send Notification
     
@@ -196,12 +242,14 @@ extension AlertManager: UNUserNotificationCenterDelegate {
         // For example, open the dashboard window
         
         switch response.notification.request.identifier {
-        case "battery.high", "battery.low":
+        case "battery.high", "battery.low", "battery.critical":
             // Could open the dashboard window here
             // NSApp.sendAction(#selector(NSApplication.activateIgnoringOtherApps(_:)), to: nil, from: true)
             break
         default:
-            break
+            if response.notification.request.identifier.hasPrefix("battery.custom.") {
+                break
+            }
         }
         
         completionHandler()
